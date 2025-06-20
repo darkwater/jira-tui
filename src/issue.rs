@@ -14,6 +14,26 @@ impl Issue {
             description: description.into(),
         }
     }
+
+    /// Map from Jira API model to internal Issue struct.
+    pub fn from_jira(jira: &jira_v3_openapi::models::IssueBean) -> Self {
+        let (title, description) = if let Some(fields) = &jira.fields {
+            let title = fields
+                .get("summary")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "<no summary>".to_string());
+            let description = fields
+                .get("description")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "".to_string());
+            (title, description)
+        } else {
+            ("<no summary>".to_string(), "".to_string())
+        };
+        Self { title, description }
+    }
 }
 
 #[cfg(test)]

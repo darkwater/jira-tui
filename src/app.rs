@@ -16,18 +16,9 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(issues: Vec<Issue>) -> Self {
         Self {
-            issues: vec![
-                Issue {
-                    title: "First issue".to_string(),
-                    description: "This is the first issue.".to_string(),
-                },
-                Issue {
-                    title: "Second issue".to_string(),
-                    description: "This is the second issue.".to_string(),
-                },
-            ],
+            issues,
             selected: 0,
             input_mode: InputMode::Normal,
             input: String::new(),

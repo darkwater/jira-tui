@@ -1,3 +1,6 @@
+pub mod input;
+pub mod issue;
+
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -7,7 +10,7 @@ use ratatui::{
 };
 
 use crate::app::App;
-use crate::input::InputMode;
+use crate::ui::input::InputMode;
 
 /// Renders the entire UI, including the issue list, input, and (optionally) the sidebar.
 pub fn render_ui(f: &mut Frame, app: &App) {

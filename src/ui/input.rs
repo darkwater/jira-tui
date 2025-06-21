@@ -14,12 +14,32 @@ pub enum InputMode {
 
 /// Handles key events in normal mode.
 /// Returns an enum describing the action to take.
-pub fn handle_normal_mode_key(key: &KeyEvent) -> NormalModeAction {
-    match key.code {
-        KeyCode::Char('q') => NormalModeAction::Quit,
-        KeyCode::Down | KeyCode::Char('j') => NormalModeAction::SelectNext,
-        KeyCode::Up | KeyCode::Char('k') => NormalModeAction::SelectPrev,
-        KeyCode::Char('i') => NormalModeAction::EnterInput,
+/// Handles key events in normal mode, supporting numeric prefixes for j/k.
+/// Returns an enum describing the action to take.
+pub fn handle_normal_mode_key(
+    key: &KeyEvent,
+    pending_count: &mut Option<usize>,
+) -> NormalModeAction {
+    use KeyCode::*;
+
+    // Accumulate digits and return early
+    if let Char(c) = key.code {
+        if c.is_ascii_digit() && !(c == '0' && pending_count.is_none()) {
+            let digit = c.to_digit(10).unwrap() as usize;
+            *pending_count = Some(pending_count.unwrap_or(0) * 10 + digit);
+            return NormalModeAction::None;
+        }
+    }
+
+    match (key.code, pending_count.take().unwrap_or(1)) {
+        (Down | Char('j'), count) => NormalModeAction::Jump(count as isize),
+        (Up | Char('k'), count) => NormalModeAction::Jump(-(count as isize)),
+        (Char('d'), _) => NormalModeAction::Jump(20),
+        (Char('u'), _) => NormalModeAction::Jump(-20),
+        (Char('i'), _) => NormalModeAction::EnterInput,
+        (Char('g'), _) => NormalModeAction::GotoTop,
+        (Char('G'), _) => NormalModeAction::GotoBottom,
+        (Char('q'), _) => NormalModeAction::Quit,
         _ => NormalModeAction::None,
     }
 }
@@ -28,23 +48,26 @@ pub fn handle_normal_mode_key(key: &KeyEvent) -> NormalModeAction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NormalModeAction {
     Quit,
-    SelectNext,
-    SelectPrev,
+    Jump(isize),
     EnterInput,
+    GotoTop,
+    GotoBottom,
     None,
 }
 
 /// Handles key events in editing mode, mutating the input string as needed.
 /// Returns an enum describing the action to take.
 pub fn handle_editing_mode_key(key: &KeyEvent, input: &mut String) -> EditingModeAction {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+
     match key.code {
         KeyCode::Enter => EditingModeAction::Submit,
         KeyCode::Esc => EditingModeAction::Cancel,
-        KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Char('w') if ctrl => {
             delete_prev_word(input);
             EditingModeAction::Edited
         }
-        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Char('u') if ctrl => {
             input.clear();
             EditingModeAction::Edited
         }

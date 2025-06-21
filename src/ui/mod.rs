@@ -1,6 +1,9 @@
 pub mod input;
 pub mod issue;
 
+use crate::app::App;
+use crate::ui::input::{InputMode, TextInputWidget};
+use ratatui::layout::Margin;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -9,11 +12,8 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
-use crate::app::App;
-use crate::ui::input::InputMode;
-
 /// Renders the entire UI, including the issue list, input, and (optionally) the sidebar.
-pub fn render_ui(f: &mut Frame, app: &App) {
+pub fn render_ui(f: &mut Frame, app: &mut App) {
     // Split horizontally: left (issue list + input), right (sidebar/details)
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -26,7 +26,7 @@ pub fn render_ui(f: &mut Frame, app: &App) {
     // Left side: split vertically into issue list (top) and input (bottom)
     let left_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(5), Constraint::Length(3)])
+        .constraints([Constraint::Min(5), Constraint::Length(2)])
         .split(main_chunks[0]);
 
     render_issue_list(f, app, left_chunks[0]);
@@ -38,62 +38,50 @@ pub fn render_ui(f: &mut Frame, app: &App) {
 }
 
 /// Renders the issue list widget.
-fn render_issue_list(f: &mut Frame, app: &App, area: Rect) {
+fn render_issue_list(f: &mut Frame, app: &mut App, area: Rect) {
     let items: Vec<ListItem> = app
         .issues
         .iter()
         .map(|i| ListItem::new(i.title.clone()))
         .collect();
-    let issues = List::new(items)
-        .block(Block::default().title("Issues"))
-        .highlight_style(
-            Style::default()
-                .bg(Color::Blue)
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol("> ");
-    f.render_stateful_widget(
-        issues,
-        area,
-        &mut list_state(app.selected, app.issues.len()),
-    );
-}
 
-/// Helper to create ListState for selection
-fn list_state(selected: usize, len: usize) -> ratatui::widgets::ListState {
-    let mut state = ratatui::widgets::ListState::default();
-    if len > 0 {
-        state.select(Some(selected));
-    }
-    state
+    let issues = List::new(items).highlight_style(
+        Style::default()
+            .bg(Color::Blue)
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD),
+    );
+
+    f.render_stateful_widget(issues, area, &mut app.list_state);
 }
 
 /// Renders the new issue input widget.
-fn render_issue_input(f: &mut Frame, app: &App, area: Rect) {
-    let input = Paragraph::new(app.input.as_str())
-        .style(match app.input_mode {
-            InputMode::Normal => Style::default(),
-            InputMode::Editing => Style::default().fg(Color::Yellow),
-        })
-        .block(
-            Block::default()
-                .borders(Borders::TOP)
-                .title("New Issue (i)"),
-        );
-    f.render_widget(input, area);
+fn render_issue_input(f: &mut Frame, app: &mut App, area: Rect) {
+    let area = area.inner(Margin::new(2, 0));
 
-    // Show cursor in input mode
-    if app.input_mode == InputMode::Editing {
-        let x = area.x + app.input.len() as u16;
-        let y = area.y + 1;
+    let is_editing = app.input_mode == InputMode::Insert;
+    let widget = TextInputWidget::new(
+        &app.input,
+        "New issue (i)",
+        is_editing,
+        Style::default().fg(Color::Yellow),
+        Style::default().fg(Color::DarkGray),
+    );
+
+    f.render_stateful_widget(widget, area, &mut app.input_state);
+
+    // Show cursor in input mode using stateful cursor position
+    if is_editing {
+        let x = area.x + app.input_state.cursor.min(area.width as usize - 1) as u16;
+        let y = area.y;
         f.set_cursor_position((x, y));
     }
 }
 
 /// Renders the sidebar/details widget, if visible.
 fn render_sidebar(f: &mut Frame, app: &App, area: Rect) {
-    let details = if let Some(issue) = app.issues.get(app.selected) {
+    let selected = app.list_state.selected().unwrap_or(0);
+    let details = if let Some(issue) = app.issues.get(selected) {
         vec![
             Line::from(vec![Span::styled(
                 &issue.title,

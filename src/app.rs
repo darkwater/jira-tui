@@ -92,7 +92,6 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
                             }
                             NormalModeAction::EnterInput => {
                                 app.input_mode = InputMode::Insert;
-                                app.list_state.select(None);
                             }
                             NormalModeAction::ToggleSidebar => {
                                 app.sidebar_visible = !app.sidebar_visible;

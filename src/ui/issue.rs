@@ -1,16 +1,115 @@
 //! Issue model and helpers for Jira TUI.
 
+use jira_v3_openapi::models::IssueBean;
+use ratatui::style::Color;
+
+use crate::ui::theme::Theme;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Issue {
     pub id: String,
     pub summary: String,
     pub description: String,
     pub issue_type: Option<String>,
-    pub status: Option<String>,
-    pub priority: Option<String>,
+    pub status: Option<Status>,
+    pub priority: Option<Priority>,
     pub story_points: Option<f64>,
     pub parent_epic: Option<String>,
     // Add more fields as needed (e.g., assignee, etc.)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Priority {
+    High,
+    Medium,
+    Low,
+    Other(String),
+}
+
+impl Priority {
+    pub const fn color(&self, theme: &Theme) -> Color {
+        match self {
+            Priority::High => theme.red,
+            Priority::Medium => theme.yellow,
+            Priority::Low => theme.blue,
+            Priority::Other(_) => theme.yellow,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Status {
+    Todo,
+    InProgress,
+    Review,
+    Test,
+    Done,
+    Other(String),
+}
+
+impl Priority {
+    pub fn from_jira_str(s: &str) -> Self {
+        let s_lower = s.to_lowercase();
+        if s_lower.starts_with("high") {
+            Priority::High
+        } else if s_lower.starts_with("med") {
+            Priority::Medium
+        } else if s_lower.starts_with("low") {
+            Priority::Low
+        } else {
+            Priority::Other(s.to_string())
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            Priority::High => "High",
+            Priority::Medium => "Medium",
+            Priority::Low => "Low",
+            Priority::Other(s) => s,
+        }
+    }
+}
+
+impl Status {
+    pub const fn color(&self, theme: &Theme) -> Color {
+        match self {
+            Status::Todo => theme.white,
+            Status::InProgress => theme.cyan,
+            Status::Review => theme.magenta,
+            Status::Test => theme.blue,
+            Status::Done => theme.green,
+            Status::Other(_) => theme.gray,
+        }
+    }
+
+    pub fn from_jira_str(s: &str) -> Self {
+        let s_lower = s.to_lowercase();
+        if s_lower.contains("todo") {
+            Status::Todo
+        } else if s_lower.contains("progress") {
+            Status::InProgress
+        } else if s_lower.contains("review") {
+            Status::Review
+        } else if s_lower.contains("test") {
+            Status::Test
+        } else if s_lower.contains("done") {
+            Status::Done
+        } else {
+            Status::Other(s.to_string())
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            Status::Todo => "Todo",
+            Status::InProgress => "In Progress",
+            Status::Review => "Review",
+            Status::Test => "Test",
+            Status::Done => "Done",
+            Status::Other(s) => s,
+        }
+    }
 }
 
 impl Issue {
@@ -28,7 +127,7 @@ impl Issue {
     }
 
     /// Map from Jira API model to internal Issue struct.
-    pub fn from_jira(jira: &jira_v3_openapi::models::IssueBean) -> Self {
+    pub fn from_jira(jira: &IssueBean) -> Self {
         fn adf_to_plain_text(adf: &serde_json::Value) -> String {
             match adf {
                 serde_json::Value::Object(map) => {
@@ -77,12 +176,12 @@ impl Issue {
                     .get("status")
                     .and_then(|v| v.get("name"))
                     .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
+                    .map(Status::from_jira_str);
                 let priority = fields
                     .get("priority")
                     .and_then(|v| v.get("name"))
                     .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
+                    .map(Priority::from_jira_str);
                 let story_points = fields.get("customfield_10016").and_then(|v| v.as_f64());
                 let parent_epic = fields
                     .get("parent")

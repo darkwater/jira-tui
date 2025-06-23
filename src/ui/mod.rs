@@ -1,18 +1,21 @@
 pub mod input;
 pub mod issue;
+pub mod issue_list;
 pub mod theme;
 
 use crate::app::App;
-use crate::ui::input::{InputMode, TextInputWidget};
-use crate::ui::theme::THEME;
+use crate::ui::{
+    input::{InputMode, TextInputWidget},
+    issue_list::render_issue_list,
+    theme::THEME,
+};
 use itertools::Itertools;
-use ratatui::layout::Margin;
-use ratatui::style::Style;
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Margin, Rect},
+    style::Style,
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, Paragraph},
 };
 
 /// Renders the entire UI, including the issue list, input, and (optionally) the sidebar.
@@ -43,25 +46,6 @@ pub fn render_ui(f: &mut Frame, app: &mut App) {
     if app.sidebar_visible {
         render_sidebar(f, app, main_chunks[1]);
     }
-}
-
-/// Renders the issue list widget.
-fn render_issue_list(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app
-        .issues
-        .iter()
-        .map(|i| ListItem::new(i.summary.clone()))
-        .collect();
-
-    let highlight_style = if app.input_mode == crate::ui::input::InputMode::Insert {
-        THEME.list_highlight_inactive
-    } else {
-        THEME.list_highlight
-    };
-
-    let issues = List::new(items).highlight_style(highlight_style);
-
-    f.render_stateful_widget(issues, area, &mut app.list_state);
 }
 
 /// Renders the new issue input widget.
@@ -109,7 +93,7 @@ fn render_sidebar(f: &mut Frame, app: &App, area: Rect) {
                     "Status: ",
                     Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                 ),
-                Span::raw(s),
+                Span::raw(s.as_str()),
             ]));
         }
         if let Some(ref p) = issue.priority {
@@ -118,7 +102,7 @@ fn render_sidebar(f: &mut Frame, app: &App, area: Rect) {
                     "Priority: ",
                     Style::default().add_modifier(ratatui::style::Modifier::BOLD),
                 ),
-                Span::raw(p),
+                Span::raw(p.as_str()),
             ]));
         }
         if let Some(points) = issue.story_points {

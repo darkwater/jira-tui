@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 crossterm = "0.29.0"
+itertools = "0.14.0"
 jira_v3_openapi = { version = "1.3.5", features = [
     "issues_api",
     "projects_api",

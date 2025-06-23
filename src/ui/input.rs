@@ -10,7 +10,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Block, Borders, StatefulWidget, Widget};
+use ratatui::widgets::{Block, StatefulWidget, Widget};
 
 /// Represents the current input mode of the application.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -125,6 +125,7 @@ pub fn handle_normal_mode_key(
         (_, M::NONE, Char('i')) => NormalModeAction::EnterInput,
         (_, M::NONE, Char('g')) => NormalModeAction::GotoTop,
         (_, M::NONE, Char('G')) => NormalModeAction::GotoBottom,
+        (_, M::NONE, Char('s')) => NormalModeAction::ToggleSidebar,
         (_, M::NONE, Char('q')) => NormalModeAction::Quit,
         (count, M::CONTROL, Char('e')) => NormalModeAction::Scroll(count as isize),
         (count, M::CONTROL, Char('y')) => NormalModeAction::Scroll(-(count as isize)),
@@ -141,6 +142,7 @@ pub enum NormalModeAction {
     EnterInput,
     GotoTop,
     GotoBottom,
+    ToggleSidebar,
     None,
 }
 
@@ -205,6 +207,10 @@ mod tests {
         let mut s = String::from("hello world");
         delete_prev_word(&mut s);
         assert_eq!(s, "hello ");
+
+        let mut s = String::from("hello  world");
+        delete_prev_word(&mut s);
+        assert_eq!(s, "hello  ");
 
         let mut s = String::from("hello ");
         delete_prev_word(&mut s);

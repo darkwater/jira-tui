@@ -1,15 +1,15 @@
+use crate::ui::input::{EditingModeAction, NormalModeAction};
 use crate::ui::{
     input::{InputMode, TextInputState},
     issue::Issue,
 };
 use crossterm::event::{self};
+use ratatui::widgets::ListState;
 use ratatui::{Terminal, backend::Backend};
 use std::{
     io,
     time::{Duration, Instant},
 };
-
-use ratatui::widgets::ListState;
 
 pub struct App {
     pub issues: Vec<Issue>,
@@ -36,8 +36,6 @@ impl App {
         }
     }
 }
-
-use crate::ui::input::{EditingModeAction, NormalModeAction};
 
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     let tick_rate = Duration::from_millis(200);
@@ -94,6 +92,10 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
                             }
                             NormalModeAction::EnterInput => {
                                 app.input_mode = InputMode::Insert;
+                                app.list_state.select(None);
+                            }
+                            NormalModeAction::ToggleSidebar => {
+                                app.sidebar_visible = !app.sidebar_visible;
                             }
                             NormalModeAction::None => {}
                         }

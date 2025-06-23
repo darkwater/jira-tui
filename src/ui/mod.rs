@@ -1,13 +1,16 @@
 pub mod input;
 pub mod issue;
+pub mod theme;
 
 use crate::app::App;
 use crate::ui::input::{InputMode, TextInputWidget};
+use crate::ui::theme::THEME;
+use itertools::Itertools;
 use ratatui::layout::Margin;
+use ratatui::style::Style;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
@@ -23,14 +26,19 @@ pub fn render_ui(f: &mut Frame, app: &mut App) {
         ])
         .split(f.area());
 
-    // Left side: split vertically into issue list (top) and input (bottom)
+    // Left side: split vertically into issue list (top), input (middle), and footer (bottom)
     let left_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(5), Constraint::Length(2)])
+        .constraints([
+            Constraint::Min(5),    // issue list
+            Constraint::Length(2), // input
+            Constraint::Length(1), // footer/hints
+        ])
         .split(main_chunks[0]);
 
     render_issue_list(f, app, left_chunks[0]);
     render_issue_input(f, app, left_chunks[1]);
+    render_footer(f, app, left_chunks[2]);
 
     if app.sidebar_visible {
         render_sidebar(f, app, main_chunks[1]);
@@ -45,12 +53,13 @@ fn render_issue_list(f: &mut Frame, app: &mut App, area: Rect) {
         .map(|i| ListItem::new(i.title.clone()))
         .collect();
 
-    let issues = List::new(items).highlight_style(
-        Style::default()
-            .bg(Color::Blue)
-            .fg(Color::White)
-            .add_modifier(Modifier::BOLD),
-    );
+    let highlight_style = if app.input_mode == crate::ui::input::InputMode::Insert {
+        THEME.list_highlight_inactive
+    } else {
+        THEME.list_highlight
+    };
+
+    let issues = List::new(items).highlight_style(highlight_style);
 
     f.render_stateful_widget(issues, area, &mut app.list_state);
 }
@@ -64,8 +73,8 @@ fn render_issue_input(f: &mut Frame, app: &mut App, area: Rect) {
         &app.input,
         "New issue (i)",
         is_editing,
-        Style::default().fg(Color::Yellow),
-        Style::default().fg(Color::DarkGray),
+        THEME.input,
+        THEME.input_placeholder,
     );
 
     f.render_stateful_widget(widget, area, &mut app.input_state);
@@ -83,10 +92,7 @@ fn render_sidebar(f: &mut Frame, app: &App, area: Rect) {
     let selected = app.list_state.selected().unwrap_or(0);
     let details = if let Some(issue) = app.issues.get(selected) {
         vec![
-            Line::from(vec![Span::styled(
-                &issue.title,
-                Style::default().add_modifier(Modifier::BOLD),
-            )]),
+            Line::from(vec![Span::styled(&issue.title, THEME.details_title)]),
             Line::from(""),
             Line::from(issue.description.clone()),
         ]
@@ -96,4 +102,41 @@ fn render_sidebar(f: &mut Frame, app: &App, area: Rect) {
     let details =
         Paragraph::new(details).block(Block::default().borders(Borders::LEFT).title("Details"));
     f.render_widget(details, area);
+}
+
+/// Renders the footer with key hints at the bottom of the UI.
+fn render_footer(f: &mut Frame, app: &App, area: Rect) {
+    let (color, mode, key_hints) = match app.input_mode {
+        InputMode::Normal => (
+            THEME.footer_normal,
+            "NORMAL",
+            vec![("i", "new issue"), ("s", "sidebar"), ("q", "quit")],
+        ),
+        InputMode::Insert => (
+            THEME.footer_insert,
+            "INSERT",
+            vec![("Enter", "submit"), ("Esc", "cancel"), ("^U", "clear")],
+        ),
+    };
+
+    let inverted = Style { fg: color.bg, bg: color.fg, ..color };
+
+    let mode_span = Span::styled(format!(" {mode} "), color);
+
+    let key_hint_spans = key_hints.iter().map(|(key, label)| {
+        vec![Span::styled(format!(" {key} "), color), Span::styled(format!(" {label} "), inverted)]
+    });
+
+    let spans = Itertools::intersperse(
+        std::iter::once(vec![mode_span]).chain(key_hint_spans),
+        vec![Span::raw("  ")],
+    )
+    .flatten()
+    .collect::<Vec<_>>();
+
+    let footer = Line::from(spans);
+
+    let block = Block::default().borders(Borders::NONE);
+    let para = Paragraph::new(footer).block(block);
+    f.render_widget(para, area);
 }

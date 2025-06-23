@@ -1,5 +1,7 @@
 use ratatui::style::{Color, Modifier, Style};
 
+pub const THEME: Theme = Theme::new();
+
 pub struct Theme {
     pub list_highlight: Style,
     pub list_highlight_inactive: Style,
@@ -35,5 +37,3 @@ impl Theme {
         }
     }
 }
-
-pub const THEME: Theme = Theme::new();

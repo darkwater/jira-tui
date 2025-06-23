@@ -28,17 +28,10 @@ pub struct TextInputState {
     pub cursor: usize,
 }
 
-impl TextInputState {
-    pub fn new(cursor: usize) -> Self {
-        Self { cursor }
-    }
-}
-
 /// A simple single-line text input widget.
 pub struct TextInputWidget<'a> {
     pub value: &'a str,
     pub placeholder: &'a str,
-    pub is_editing: bool,
     pub style: Style,
     pub placeholder_style: Style,
     pub block: Option<Block<'a>>,
@@ -48,37 +41,30 @@ impl<'a> TextInputWidget<'a> {
     pub fn new(
         value: &'a str,
         placeholder: &'a str,
-        is_editing: bool,
         style: Style,
         placeholder_style: Style,
     ) -> Self {
         Self {
             value,
             placeholder,
-            is_editing,
             style,
             placeholder_style,
             block: None,
         }
-    }
-
-    pub fn block(mut self, block: Block<'a>) -> Self {
-        self.block = Some(block);
-        self
     }
 }
 
 impl<'a> StatefulWidget for TextInputWidget<'a> {
     type State = TextInputState;
 
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+    fn render(self, area: Rect, buf: &mut Buffer, _state: &mut Self::State) {
         let (display, style) = if self.value.is_empty() {
             (self.placeholder, self.placeholder_style)
         } else {
             (self.value, self.style)
         };
 
-        let mut text = Text::from(Line::from(Span::styled(display, style)));
+        let text = Text::from(Line::from(Span::styled(display, style)));
 
         let mut inner_area = area;
         if let Some(block) = self.block.as_ref() {

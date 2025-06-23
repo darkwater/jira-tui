@@ -50,7 +50,7 @@ fn render_issue_list(f: &mut Frame, app: &mut App, area: Rect) {
     let items: Vec<ListItem> = app
         .issues
         .iter()
-        .map(|i| ListItem::new(i.title.clone()))
+        .map(|i| ListItem::new(i.summary.clone()))
         .collect();
 
     let highlight_style = if app.input_mode == crate::ui::input::InputMode::Insert {
@@ -69,13 +69,8 @@ fn render_issue_input(f: &mut Frame, app: &mut App, area: Rect) {
     let area = area.inner(Margin::new(2, 0));
 
     let is_editing = app.input_mode == InputMode::Insert;
-    let widget = TextInputWidget::new(
-        &app.input,
-        "New issue (i)",
-        is_editing,
-        THEME.input,
-        THEME.input_placeholder,
-    );
+    let widget =
+        TextInputWidget::new(&app.input, "New issue (i)", THEME.input, THEME.input_placeholder);
 
     f.render_stateful_widget(widget, area, &mut app.input_state);
 
@@ -91,11 +86,63 @@ fn render_issue_input(f: &mut Frame, app: &mut App, area: Rect) {
 fn render_sidebar(f: &mut Frame, app: &App, area: Rect) {
     let selected = app.list_state.selected().unwrap_or(0);
     let details = if let Some(issue) = app.issues.get(selected) {
-        vec![
-            Line::from(vec![Span::styled(&issue.title, THEME.details_title)]),
-            Line::from(""),
-            Line::from(issue.description.clone()),
-        ]
+        let mut lines = vec![
+            Line::from(vec![Span::styled(&issue.summary, THEME.details_title)]),
+            Line::from(vec![
+                Span::styled("ID: ", Style::default().add_modifier(ratatui::style::Modifier::BOLD)),
+                Span::raw(&issue.id),
+            ]),
+        ];
+
+        if let Some(ref t) = issue.issue_type {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "Type: ",
+                    Style::default().add_modifier(ratatui::style::Modifier::BOLD),
+                ),
+                Span::raw(t),
+            ]));
+        }
+        if let Some(ref s) = issue.status {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "Status: ",
+                    Style::default().add_modifier(ratatui::style::Modifier::BOLD),
+                ),
+                Span::raw(s),
+            ]));
+        }
+        if let Some(ref p) = issue.priority {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "Priority: ",
+                    Style::default().add_modifier(ratatui::style::Modifier::BOLD),
+                ),
+                Span::raw(p),
+            ]));
+        }
+        if let Some(points) = issue.story_points {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "Story Points: ",
+                    Style::default().add_modifier(ratatui::style::Modifier::BOLD),
+                ),
+                Span::raw(points.to_string()),
+            ]));
+        }
+        if let Some(ref epic) = issue.parent_epic {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "Parent Epic: ",
+                    Style::default().add_modifier(ratatui::style::Modifier::BOLD),
+                ),
+                Span::raw(epic),
+            ]));
+        }
+
+        lines.push(Line::from(""));
+        lines.push(Line::from(issue.description.clone()));
+        lines
     } else {
         vec![Line::from("No issue selected")]
     };

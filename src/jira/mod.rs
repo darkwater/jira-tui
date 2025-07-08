@@ -19,11 +19,7 @@ impl JiraConfig {
         let base_url = env::var("JIRA_TUI_URL").map_err(|_| "JIRA_TUI_URL not set")?;
         let username = env::var("JIRA_TUI_USER").map_err(|_| "JIRA_TUI_USER not set")?;
         let api_token = env::var("JIRA_TUI_TOKEN").map_err(|_| "JIRA_TUI_TOKEN not set")?;
-        Ok(Self {
-            base_url,
-            username,
-            api_token,
-        })
+        Ok(Self { base_url, username, api_token })
     }
 
     pub fn to_api_config(&self) -> Configuration {

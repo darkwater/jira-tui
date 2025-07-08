@@ -17,23 +17,14 @@ mod ui;
 async fn main() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = std::io::stdout();
-    execute!(
-        stdout,
-        EnterAlternateScreen,
-        EnableMouseCapture,
-        Clear(ClearType::All)
-    )?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture, Clear(ClearType::All))?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let res = run_jira_tui(&mut terminal).await;
 
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     terminal.show_cursor()?;
 
     if let Err(e) = res {

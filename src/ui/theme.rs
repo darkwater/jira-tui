@@ -18,8 +18,10 @@ pub struct Theme {
     pub magenta: Color,
     pub cyan: Color,
     pub white: Color,
+    #[allow(dead_code)]
     pub black: Color,
     pub gray: Color,
+    #[allow(dead_code)]
     pub dark_gray: Color,
 }
 

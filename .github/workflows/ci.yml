@@ -21,7 +21,6 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: "1.87"
         components: rustfmt, clippy
         
     - name: Cache dependencies
@@ -37,11 +36,8 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-
           
-    - name: Check code compiles
-      run: cargo check --verbose
-      
     - name: Run clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings -A dead_code
+      run: cargo clippy --all-targets --all-features -- -D warnings
       
     - name: Run tests
       run: cargo test --verbose
